@@ -10,7 +10,8 @@ Site = function () {
     var evaObjectPost = new Object();
     evaObjectPost.keyDom = '<div><div class="div-baiviet">';
     evaObjectPost.queryRule = {
-        'removeHtml' : false
+        'pathHtml' : true,
+        'endHtml' :true
     };
     evaObjectPost.keyDelete = [];
     evaObjectPost.keyDelete.push('<div class="fb-like fb_iframe_widget"');

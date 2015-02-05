@@ -24,6 +24,7 @@ app.get('/crawler', function (req, res) {
     var path = req.query.path;
     var pathPage = getPathOfPage(path);
     var homePage = getHomePage(path);
+    var siteRule = Site.siteMap;
 
     console.log("HOme Page == " + homePage);
     console.log("Path Page == " + pathPage);
@@ -39,11 +40,15 @@ app.get('/crawler', function (req, res) {
         // This will be called for each crawled page
         callback: function (error, result, $) {
             try{
+                // checking result with key DOM & optimsize body
                 if (result) {
-                    var bodySummary = getBodySummary($);
+                    var bodyObject = {};
+                    bodyObject.bodySummary = getBodySummary($);
+                    bodyObject.bodyContent = getBodyContent(result.body, siteRule);
+
                     if (resultMap.size() <= c.options.maxSizeResult) {
                         var title = getTitle(result);
-                        resultMap.put(title, bodySummary);
+                        resultMap.put(title, bodyObject);
                     }
                 }
                 if ($ != undefined) {
@@ -54,22 +59,22 @@ app.get('/crawler', function (req, res) {
                             if (atags[i] != undefined && $(atags[i]) != undefined) {
                                 toQueueUrl = $(atags[i]).attr('href');
 
-                                // TODO : detect category & post Form keyword
-
+                                // TODO : detect category & post Form key DOM
                                 if (toQueueUrl != undefined && toQueueUrl.length > 0 &&
-                                    toQueueUrl.indexOf(pathPage) >= 0 && toQueueUrl.indexOf(".html") > 0) {
-                                    // remove search query page link
-                                    toQueueUrl = toQueueUrl.substring(0, toQueueUrl.indexOf(".html") + 5);
+                                    toQueueUrl.indexOf(pathPage) >= 0 ) {
 
-                                    var finalUrl = homePage + toQueueUrl;
-                                    if(finalUrl.indexOf("http://") != 0 || finalUrl.indexOf("https://") != 0){
-                                        finalUrl = "http://" + finalUrl;
-                                    }
-                                    console.log(finalUrl);
-                                    if (resultMap.size() < c.options.maxSizeResult) {
-                                        c.queue(finalUrl);
-                                    } else {
-                                        break;
+                                    //checking rule of page
+                                    var rules = siteRule.get(homePage);
+                                    var finalUrl;
+
+                                    // checking categories or post
+                                    if(!isThisPageIsAPost(result.body, rules)){
+                                        finalUrl = constructFinalUrl(homePage, toQueueUrl, rules.queryRule);
+                                        console.log(finalUrl);
+
+                                        if (resultMap.size() < c.options.maxSizeResult) {
+                                            c.queue(finalUrl);
+                                        }
                                     }
                                 }
                             }
@@ -90,6 +95,31 @@ app.get('/crawler', function (req, res) {
     });
     c.queue(path);
 });
+
+function constructFinalUrl(homePage, queryURL, queryRules){
+    // TODO: construct final URL with query Rules
+
+    // remove search query page link
+    if(queryURL.indexOf(".html") > 0){
+        queryURL = queryURL.substring(0, queryURL.indexOf(".html") + 5);
+    }
+    var finalUrl = homePage + queryURL;
+    if(finalUrl.indexOf("http://") != 0 || finalUrl.indexOf("https://") != 0){
+        finalUrl = "http://" + finalUrl;
+    }
+    return finalUrl;
+}
+
+
+function getBodyContent(resultBody, siteRule){
+    // TODO: get body content here
+    return "";
+}
+
+function isThisPageIsAPost(resultBody, rules){
+    // TODO: check is result is a Post or Categories
+    return false;
+}
 
 function getHomePage(path) {
     // remove http if existed
