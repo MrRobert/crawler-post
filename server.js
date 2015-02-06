@@ -16,7 +16,8 @@ require('./util');
 require('./siteMap');
 
 app.get('/', function (req, res) {
-    res.set("Access-Control-Allow-Origin","http://localhost:4000");
+    res.set("Access-Control-Allow-Credentials", true);
+    res.set("Access-Control-Allow-Origin", "http://localhost:4000");
     res.render('home');
 });
 
@@ -25,11 +26,14 @@ app.get('/crawler', function (req, res) {
     var pathPage = getPathOfPage(path);
     var homePage = getHomePage(path);
     var siteRule = Site.siteMap;
+    var rules = siteRule.get(homePage);
 
     console.log("HOme Page == " + homePage);
     console.log("Path Page == " + pathPage);
+    console.log("Rules =====" + rules);
 
     var isReturn = false;
+    var retrivedPage = [];
 
     var resultMap = new HashMap();
     var c = new Crawler({
@@ -39,15 +43,18 @@ app.get('/crawler', function (req, res) {
         skipDuplicates: true,
         // This will be called for each crawled page
         callback: function (error, result, $) {
-            try{
+            try {
                 // checking result with key DOM & optimsize body
                 if (result) {
                     var bodyObject = {};
                     bodyObject.bodySummary = getBodySummary($);
                     bodyObject.bodyContent = getBodyContent(result.body, siteRule);
 
-                    if (resultMap.size() <= c.options.maxSizeResult) {
+                    if (resultMap.size() <= c.options.maxSizeResult &&
+                        isThisPageIsAPost(result, rules, result.request.href)) {
+
                         var title = getTitle(result);
+                        console.log("GONNA PUSH TO MAP ==========" + resultMap.size());
                         resultMap.put(title, bodyObject);
                     }
                 }
@@ -60,64 +67,89 @@ app.get('/crawler', function (req, res) {
                                 toQueueUrl = $(atags[i]).attr('href');
 
                                 // TODO : detect category & post Form key DOM
+                                var pathPageEdited = pathPageWithRule(pathPage, rules);
                                 if (toQueueUrl != undefined && toQueueUrl.length > 0 &&
-                                    toQueueUrl.indexOf(pathPage) >= 0 ) {
-
+                                    toQueueUrl.indexOf(pathPageEdited) >= 0) {
                                     //checking rule of page
-                                    var rules = siteRule.get(homePage);
-                                    var finalUrl;
-
-                                    // checking categories or post
-                                    if(!isThisPageIsAPost(result.body, rules)){
-                                        finalUrl = constructFinalUrl(homePage, toQueueUrl, rules.queryRule);
+                                    var finalUrl = constructFinalUrl(homePage, toQueueUrl);
+                                    //var checkingRule = checkWithRule(finalUrl, rules);
+                                    if (resultMap.size() < c.options.maxSizeResult && retrivedPage.indexOf(finalUrl) < 0) {
                                         console.log(finalUrl);
-
-                                        if (resultMap.size() < c.options.maxSizeResult) {
-                                            c.queue(finalUrl);
-                                        }
+                                        c.queue(finalUrl);
+                                        retrivedPage.push(finalUrl);
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }catch(err){
-                console.log("ERRROR =====================" +err);
+            } catch (err) {
+                console.log("ERRROR =====================" + err);
             }
         },
         onDrain: function () {
             console.log("=================RESPONSE AT END============");
-            if(isReturn == false) {
+            if (isReturn == false) {
                 isReturn = true;
                 res.status(200).json(resultMap);
             }
         }
     });
     c.queue(path);
+    retrivedPage.push(path);
 });
 
-function constructFinalUrl(homePage, queryURL, queryRules){
-    // TODO: construct final URL with query Rules
+function pathPageWithRule(pathPage, rules){
+    if(rules != "" && rules.queryRule.pathHtml){
+        // remove html pathPage
+        pathPage = pathPage.substr(0, pathPage.indexOf(".html"));
 
+        var indexRemovePath = pathPage.indexOf(rules.queryRule.pathRemove);
+        if(rules.queryRule.pathRemove != '' && indexRemovePath >= 0){
+            pathPage = pathPage.substring(0, indexRemovePath);
+        }
+        return pathPage;
+    }else{
+        //default
+        return pathPage;
+    }
+}
+
+function constructFinalUrl(homePage, queryURL) {
     // remove search query page link
-    if(queryURL.indexOf(".html") > 0){
+    if (queryURL.indexOf(".html") > 0) {
         queryURL = queryURL.substring(0, queryURL.indexOf(".html") + 5);
     }
-    var finalUrl = homePage + queryURL;
-    if(finalUrl.indexOf("http://") != 0 || finalUrl.indexOf("https://") != 0){
-        finalUrl = "http://" + finalUrl;
+    var finalUrl = queryURL;
+    var isMatch = queryURL.match(homePage);
+    if(isMatch == null || isMatch.length < 0){
+        finalUrl = homePage + finalUrl;
+
+        if (finalUrl.indexOf("http://") != 0 || finalUrl.indexOf("https://") != 0) {
+            finalUrl = "http://" + finalUrl;
+        }
     }
     return finalUrl;
 }
 
 
-function getBodyContent(resultBody, siteRule){
+function getBodyContent(resultBody, siteRule) {
     // TODO: get body content here
     return "";
 }
 
-function isThisPageIsAPost(resultBody, rules){
-    // TODO: check is result is a Post or Categories
+function isThisPageIsAPost(result, rules, queryUrl) {
+    if (rules != "") {
+        var match = result.body.match(rules.keyDom);
+        if (match && match.length > 0) {
+            return true;
+        }
+    } else {
+        // Default page is post is have .html at the end url
+        if (queryUrl.indexOf(".html") > 0) {
+            return true;
+        }
+    }
     return false;
 }
 
