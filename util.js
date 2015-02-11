@@ -25,3 +25,24 @@ HashMap = function() {
         this.values.slice(index);
     }
 }
+//=============================Date Util ===============================
+var moment = require('moment');
+
+DateUtil = function(){}
+DateUtil.convertToDateString = function(input){
+    //Thứ Ba, ngày 27/01/2015 09:44 AM (GMT+7)
+    if(input.indexOf('/') > 2){
+        input = input.substring(input.indexOf('/') - 2);
+        var lastIndexSplash = input.lastIndexOf('/');
+        input = input.substring(0, lastIndexSplash + 5);
+    }
+    return input.split('/').reverse().join('-');
+}
+
+DateUtil.toDateTime = function(rawDataStr){
+   return moment(DateUtil.convertToDateString(rawDataStr));
+}
+
+DateUtil.rangeOfTwoDate = function(startDate, endDate){
+    return startDate.diff(endDate, 'days');
+}

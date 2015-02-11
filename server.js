@@ -5,12 +5,14 @@
 
 var express = require('express'),
     app = express();
+var fs = require('fs');
+var moment = require('moment');
 
 var port = process.env.PORT || 4000;
+
 app.listen(port);
 
 var Crawler = require("crawler");
-
 require('./config')(app);
 require('./util');
 require('./siteMap');
@@ -28,12 +30,8 @@ app.get('/crawler', function (req, res) {
     var siteRule = Site.siteMap;
     var rules = siteRule.get(homePage);
 
-    console.log("HOme Page == " + homePage);
-    console.log("Path Page == " + pathPage);
-    console.log("Rules =====" + rules);
-
     var isReturn = false;
-    var retrivedPage = [];
+    var retrievedPage = [];
 
     var resultMap = new HashMap();
     var c = new Crawler({
@@ -46,18 +44,22 @@ app.get('/crawler', function (req, res) {
             try {
                 // checking result with key DOM & optimsize body
                 if (result) {
+
                     var bodyObject = {};
                     bodyObject.bodySummary = getBodySummary($);
                     bodyObject.bodyContent = getBodyContent(result.body, siteRule);
 
                     if (resultMap.size() <= c.options.maxSizeResult &&
-                        isThisPageIsAPost(result, rules, result.request.href)) {
+                        isThisPageIsAPost(result, rules, result.request.href) &&
+                        isPostTimeAcceptable(result, rules)) {
 
                         var title = getTitle(result);
                         console.log("GONNA PUSH TO MAP ==========" + resultMap.size());
                         resultMap.put(title, bodyObject);
                     }
                 }
+
+                /*
                 if ($ != undefined) {
                     var atags = $('a');
                     if (atags != undefined && atags.length > 0) {
@@ -73,16 +75,18 @@ app.get('/crawler', function (req, res) {
                                     //checking rule of page
                                     var finalUrl = constructFinalUrl(homePage, toQueueUrl);
                                     //var checkingRule = checkWithRule(finalUrl, rules);
-                                    if (resultMap.size() < c.options.maxSizeResult && retrivedPage.indexOf(finalUrl) < 0) {
+                                    if (resultMap.size() < c.options.maxSizeResult && retrievedPage.indexOf(finalUrl) < 0) {
                                         console.log(finalUrl);
                                         c.queue(finalUrl);
-                                        retrivedPage.push(finalUrl);
+                                        retrievedPage.push(finalUrl);
                                     }
                                 }
                             }
                         }
                     }
                 }
+                */
+
             } catch (err) {
                 console.log("ERRROR =====================" + err);
             }
@@ -96,8 +100,21 @@ app.get('/crawler', function (req, res) {
         }
     });
     c.queue(path);
-    retrivedPage.push(path);
+    retrievedPage.push(path);
 });
+
+function isPostTimeAcceptable(result, rules){
+    // TODO get current post time
+    var body = result.body;
+    if(body.match(rules.keyTime)){
+        var indexKeyTime = body.indexOf(rules.keyTime);
+        body = body.substring(indexKeyTime, indexKeyTime + 50);
+    }
+    if(DateUtil.rangeOfTwoDate(moment(), DateUtil.toDateTime(body)) <= 7){
+        return true;
+    }
+    return false;
+}
 
 function pathPageWithRule(pathPage, rules){
     if(rules != "" && rules.queryRule.pathHtml){
