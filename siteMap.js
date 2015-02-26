@@ -9,6 +9,7 @@ Site.siteMap = new HashMap();
 // EVA PAGE ================
 var evaObjectPost = new Object();
 evaObjectPost.keyDom = 'div-baiviet';
+evaObjectPost.keyDomPrefix = '.';
 evaObjectPost.keyTime = 'baiviet-ngay';
 evaObjectPost.queryRule = {
     'pathHtml' : true,

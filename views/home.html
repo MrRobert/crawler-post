@@ -16,6 +16,7 @@
     <link href="http://fonts.googleapis.com/css?family=Open+Sans Condensed:300italic,300,700" rel="stylesheet"
           type="text/css">
     <script language="javascript" type="text/javascript" src="js/jquery-1.11.2.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
 
 </head>
 
@@ -42,7 +43,6 @@
         </a>
     </div>
     <div style="padding-left: 25%;" id="resultDiv"></div>
-
 </section>
 
 <script type="text/javascript">
@@ -53,12 +53,15 @@
                 alert('success');
                 $('#resultDiv').html("");
                 for (var i = 0; i < result.keys.length; i++) {
+                    var htmlContent = '<div class="collapse" id="collapse'+ i +'">'+ result.values[i].bodyContent +'</div>';
                     var html = '<div><strong>' + result.keys[i] + '</strong><br>' +
-                            '<span class="text-muted" style=\"font-size:13px;\">' + result.values[i].bodySummary + '</span></div>';
+                            '<span class="text-muted" style=\"font-size:13px;\">' + result.values[i].bodySummary + '</span>' +
+                            '<a data-toggle="collapse" href="#collapse'+ i +'" aria-expanded="false" aria-controls="collapse'+ i +'" id="seeMore'+ i +'">See more</a>' +
+                            htmlContent + '</div>';
                     $('#resultDiv').append(html);
                 }
             });
-            e.preventDefault();
+            //e.preventDefault();
         });
     });
 </script>

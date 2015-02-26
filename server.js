@@ -25,6 +25,9 @@ app.get('/', function (req, res) {
 
 app.get('/crawler', function (req, res) {
     var path = req.query.path;
+    if(path.indexOf('http://') < 0) {
+        path = 'http://' + path;
+    }
     var pathPage = getPathOfPage(path);
     var homePage = getHomePage(path);
     var siteRule = Site.siteMap;
@@ -36,7 +39,7 @@ app.get('/crawler', function (req, res) {
     var resultMap = new HashMap();
     var c = new Crawler({
         retryTimeout: 10000,
-        maxSizeResult: 50,
+        maxSizeResult: 20,
         maxConnections: 20,
         skipDuplicates: true,
         // This will be called for each crawled page
@@ -47,7 +50,7 @@ app.get('/crawler', function (req, res) {
 
                     var bodyObject = {};
                     bodyObject.bodySummary = getBodySummary($);
-                    bodyObject.bodyContent = getBodyContent(result.body, siteRule);
+                    bodyObject.bodyContent = getBodyContent(result.body, rules, $);
 
                     if (resultMap.size() <= c.options.maxSizeResult &&
                         isThisPageIsAPost(result, rules, result.request.href) &&
@@ -59,7 +62,6 @@ app.get('/crawler', function (req, res) {
                     }
                 }
 
-                /*
                 if ($ != undefined) {
                     var atags = $('a');
                     if (atags != undefined && atags.length > 0) {
@@ -85,7 +87,6 @@ app.get('/crawler', function (req, res) {
                         }
                     }
                 }
-                */
 
             } catch (err) {
                 console.log("ERRROR =====================" + err);
@@ -104,7 +105,6 @@ app.get('/crawler', function (req, res) {
 });
 
 function isPostTimeAcceptable(result, rules){
-    // TODO get current post time
     var body = result.body;
     if(body.match(rules.keyTime)){
         var indexKeyTime = body.indexOf(rules.keyTime);
@@ -149,9 +149,12 @@ function constructFinalUrl(homePage, queryURL) {
     return finalUrl;
 }
 
-
-function getBodyContent(resultBody, siteRule) {
-    // TODO: get body content here
+function getBodyContent(resultBody, rules, $) {
+    if(resultBody.match(rules.keyDom)){
+        var divKeyDom = $(rules.keyDomPrefix + rules.keyDom);
+        var divParent = $(divKeyDom).parent();
+        return $(divParent).html();
+    }
     return "";
 }
 
