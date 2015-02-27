@@ -52,14 +52,15 @@
             $.getJSON('/crawler?path='+ $('#path').val(), function(result){
                 alert('success');
                 $('#resultDiv').html("");
+                var html = '';
                 for (var i = 0; i < result.keys.length; i++) {
                     var htmlContent = '<div class="collapse" id="collapse'+ i +'">'+ result.values[i].bodyContent +'</div>';
-                    var html = '<div><strong>' + result.keys[i] + '</strong><br>' +
+                    html += '<div><strong>' + result.keys[i] + '</strong><br>' +
                             '<span class="text-muted" style=\"font-size:13px;\">' + result.values[i].bodySummary + '</span>' +
                             '<a data-toggle="collapse" href="#collapse'+ i +'" aria-expanded="false" aria-controls="collapse'+ i +'" id="seeMore'+ i +'">See more</a>' +
                             htmlContent + '</div>';
-                    $('#resultDiv').append(html);
                 }
+                $('#resultDiv').append(html);
             });
             //e.preventDefault();
         });
